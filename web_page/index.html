@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Control</title>
+    <link rel="stylesheet" type="text/css" href="css/control.css">
+    <link rel="icon" href="img/logoOpen.ico" type="image/x-icon">
+    <style>
+        .status-indicator {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .status-option {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .status-option.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .alert-message {
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="control-container">
+        <div class="control-header">
+            <img src="img/logoOpen.png" alt="Logo" class="logo">
+        </div>
+        <div class="control-form">
+            <div class="control-input">
+                <select id="device-select" class="form-control">
+                    <option value="1">Dispositivo 1</option>
+                    <option value="2">Dispositivo 2</option>
+                    <option value="3">Dispositivo 3</option>
+                    <option value="4">Dispositivo 4</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="control-status">
+            <label class="status-label">Estado de Cerradura</label>
+            <div class="status-options">
+                <label>
+                    <input type="radio" name="lock-status" value="1,1">
+                    <span>Abierto</span>
+                </label>
+                <label>
+                    <input type="radio" name="lock-status" value="1,0" checked>
+                    <span>Cerrado</span>
+                </label>
+            </div>
+            <button id="set-status-btn" class="control-button">Aplicar Estado</button>
+        </div>
+        
+        <div class="status-indicator">
+            <div id="door-closed" class="status-option">Cerrada</div>
+            <div id="door-mid" class="status-option">Mal Cerrada</div>
+            <div id="door-open" class="status-option">Abierta</div>
+        </div>
+        
+        <div id="intruder-alert" class="alert-message alert-danger">
+            ¡Alerta! Intruso detectado en el dispositivo
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://10.169.86.36:5000/api";
+        let currentDevice = "1";
+        let lastVibsens = 0;
+        
+        // Actualizar estado de la puerta
+        function updateDoorStatus(magsens) {
+            // Reset all
+            document.querySelectorAll('.status-option').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Activate current
+            if (magsens === 0) {
+                document.getElementById('door-closed').classList.add('active');
+            } else if (magsens === 1) {
+                document.getElementById('door-mid').classList.add('active');
+            } else if (magsens === 2) {
+                document.getElementById('door-open').classList.add('active');
+            }
+        }
+        
+        // Verificar alertas
+        function checkAlerts(vibsens) {
+            const alertDiv = document.getElementById('intruder-alert');
+            
+            if (vibsens === 1 && lastVibsens === 0) {
+                alertDiv.style.display = 'block';
+                setTimeout(() => {
+                    alertDiv.style.display = 'none';
+                }, 5000);
+            }
+            
+            lastVibsens = vibsens;
+        }
+        
+        // Obtener estado del dispositivo
+        function fetchDeviceStatus() {
+            fetch(`${API_BASE}/status/ESP32_${currentDevice}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.error) {
+                        updateDoorStatus(data.magsens);
+                        checkAlerts(data.vibsens);
+                    }
+                });
+        }
+        
+        // Configurar estado del dispositivo
+        function setDeviceStatus(state) {
+            fetch(`${API_BASE}/control`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    device: currentDevice,
+                    state: state
+                })
+            });
+        }
+        
+        // Event listeners
+        document.getElementById('device-select').addEventListener('change', (e) => {
+            currentDevice = e.target.value;
+            fetchDeviceStatus();
+        });
+        
+        document.getElementById('set-status-btn').addEventListener('click', () => {
+            const selectedStatus = document.querySelector('input[name="lock-status"]:checked').value;
+            setDeviceStatus(selectedStatus);
+        });
+        
+        // Polling cada 2 segundos
+        setInterval(fetchDeviceStatus, 2000);
+        
+        // Inicializar
+        fetchDeviceStatus();
+    </script>
+</body>
+</html>

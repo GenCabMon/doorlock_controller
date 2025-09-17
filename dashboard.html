@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel del Usuario</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f9fafb;
+    }
+
+    header {
+      background: #0284c7;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .device-name {
+      font-weight: bold;
+    }
+
+    main {
+      padding: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>IoT Hub Dashboard</h1>
+    <div class="device-name" id="device-name">Cargando dispositivo...</div>
+  </header>
+
+  <main>
+    <p>Bienvenido al panel. Aquí podrás ver la información de tu dispositivo registrado.</p>
+    <!-- Aquí podrías agregar sensores, datos en vivo, etc. -->
+  </main>
+
+  <!-- Firebase App -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <!-- Firebase Auth -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <!-- Firebase Realtime Database -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBDiA-LvMvXxik1WAY_n0pQTQAqfyVbYsY",
+      authDomain: "iot-hub-project-27607.firebaseapp.com",
+      databaseURL: "https://iot-hub-project-27607-default-rtdb.firebaseio.com",
+      projectId: "iot-hub-project-27607",
+      storageBucket: "iot-hub-project-27607.firebasestorage.app",
+      messagingSenderId: "6367026894",
+      appId: "1:6367026894:web:cc68950e80592417e1fa9f",
+      measurementId: "G-4MKMHV8C07"
+    };
+
+    // Inicializa Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const database = firebase.database();
+
+    const deviceNameEl = document.getElementById('device-name');
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        const uid = user.uid;
+
+        database.ref('usuarios/' + uid).once('value')
+          .then(snapshot => {
+            const data = snapshot.val();
+            if (data && data.dispositivo) {
+              deviceNameEl.textContent = data.dispositivo;
+            } else {
+              deviceNameEl.textContent = 'Dispositivo no registrado';
+            }
+          })
+          .catch(error => {
+            deviceNameEl.textContent = 'Error al cargar dispositivo';
+            console.error(error);
+          });
+
+      } else {
+        // Usuario no autenticado, redirigir
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+
+</body>
+</html>
